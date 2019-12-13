@@ -32,7 +32,6 @@ func NewRandomTicker(min, max time.Duration) *RandomTicker {
 // Stop terminates the ticker goroutine and closes the C channel.
 func (rt *RandomTicker) Stop() {
 	close(rt.stopc)
-	close(rt.C)
 }
 
 func (rt *RandomTicker) loop() {
