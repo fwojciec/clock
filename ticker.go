@@ -10,7 +10,7 @@ import (
 // counts).
 type RandomTicker struct {
 	C     chan time.Time
-	stopc chan struct{}
+	stopc chan chan struct{}
 	min   int64
 	max   int64
 }
@@ -21,7 +21,7 @@ type RandomTicker struct {
 func NewRandomTicker(min, max time.Duration) *RandomTicker {
 	rt := &RandomTicker{
 		C:     make(chan time.Time),
-		stopc: make(chan struct{}),
+		stopc: make(chan chan struct{}),
 		min:   min.Nanoseconds(),
 		max:   max.Nanoseconds(),
 	}
@@ -31,16 +31,20 @@ func NewRandomTicker(min, max time.Duration) *RandomTicker {
 
 // Stop terminates the ticker goroutine and closes the C channel.
 func (rt *RandomTicker) Stop() {
-	close(rt.stopc)
+	c := make(chan struct{})
+	rt.stopc <- c
+	<-c
 }
 
 func (rt *RandomTicker) loop() {
+	defer close(rt.C)
 	t := time.NewTimer(rt.nextInterval())
 	for {
 		// either a stop signal or a timeout
 		select {
-		case <-rt.stopc:
+		case c := <-rt.stopc:
 			t.Stop()
+			close(c)
 			return
 		case <-t.C:
 			select {
